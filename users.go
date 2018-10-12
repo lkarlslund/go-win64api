@@ -7,8 +7,6 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
-
-	so "github.com/iamacarpet/go-win64api/shared"
 )
 
 var (
@@ -111,6 +109,20 @@ type USER_INFO_1011 struct {
 
 type LOCALGROUP_MEMBERS_INFO_3 struct {
 	Lgrmi3_domainandname *uint16
+}
+
+type LocalUser struct {
+	Username             string        `json:"username"`
+	FullName             string        `json:"fullName"`
+	IsEnabled            bool          `json:"isEnabled"`
+	IsLocked             bool          `json:"isLocked"`
+	IsAdmin              bool          `json:"isAdmin"`
+	PasswordNeverExpires bool          `json:"passwordNeverExpires"`
+	NoChangePassword     bool          `json:"noChangePassword"`
+	PasswordAge          time.Duration `json:"passwordAge"`
+	LastLogon            time.Time     `json:"lastLogon"`
+	BadPasswordCount     uint32        `json:"badPasswordCount"`
+	NumberOfLogons       uint32        `json:"numberOfLogons"`
 }
 
 func UserAdd(username string, fullname string, password string) (bool, error) {
@@ -229,19 +241,19 @@ func IsDomainUserAdmin(username string, domain string) (bool, error) {
 	}
 }
 
-func ListLocalUsers() ([]so.LocalUser, error) {
+func ListLocalUsers() ([]LocalUser, error) {
 	var (
 		dataPointer  uintptr
 		resumeHandle uintptr
 		entriesRead  uint32
 		entriesTotal uint32
 		sizeTest     USER_INFO_2
-		retVal       []so.LocalUser = make([]so.LocalUser, 0)
+		retVal       []LocalUser = make([]LocalUser, 0)
 	)
 
 	ret, _, _ := usrNetUserEnum.Call(
-		uintptr(0),                                  // servername
-		uintptr(uint32(2)),                          // level, USER_INFO_2
+		uintptr(0),         // servername
+		uintptr(uint32(2)), // level, USER_INFO_2
 		uintptr(uint32(USER_FILTER_NORMAL_ACCOUNT)), // filter, only "normal" accounts.
 		uintptr(unsafe.Pointer(&dataPointer)),       // struct buffer for output data.
 		uintptr(uint32(USER_MAX_PREFERRED_LENGTH)),  // allow as much memory as required.
@@ -259,7 +271,7 @@ func ListLocalUsers() ([]so.LocalUser, error) {
 	for i := uint32(0); i < entriesRead; i++ {
 		var data *USER_INFO_2 = (*USER_INFO_2)(unsafe.Pointer(iter))
 
-		ud := so.LocalUser{
+		ud := LocalUser{
 			Username:         UTF16toString(data.Usri2_name),
 			FullName:         UTF16toString(data.Usri2_full_name),
 			PasswordAge:      (time.Duration(data.Usri2_password_age) * time.Second),

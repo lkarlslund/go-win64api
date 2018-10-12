@@ -3,12 +3,29 @@ package winapi
 
 import (
 	"fmt"
-	"golang.org/x/sys/windows/registry"
 
-	so "github.com/iamacarpet/go-win64api/shared"
+	"golang.org/x/sys/windows/registry"
 )
 
-func InstalledSoftwareList() ([]so.Software, error) {
+type Software struct {
+	DisplayName    string `json:"displayName"`
+	DisplayVersion string `json:"displayVersion"`
+	Arch           string `json:"arch"`
+}
+
+func (s *Software) Name() string {
+	return s.DisplayName
+}
+
+func (s *Software) Version() string {
+	return s.DisplayVersion
+}
+
+func (s *Software) Architecture() string {
+	return s.Arch
+}
+
+func InstalledSoftwareList() ([]Software, error) {
 	sw64, err := getSoftwareList(`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`, "X64")
 	if err != nil {
 		return nil, err
@@ -21,14 +38,14 @@ func InstalledSoftwareList() ([]so.Software, error) {
 	return append(sw64, sw32...), nil
 }
 
-func getSoftwareList(baseKey string, arch string) ([]so.Software, error) {
+func getSoftwareList(baseKey string, arch string) ([]Software, error) {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, baseKey, registry.QUERY_VALUE|registry.ENUMERATE_SUB_KEYS)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading from registry: %s", err.Error())
 	}
 	defer k.Close()
 
-	swList := make([]so.Software, 0)
+	swList := make([]Software, 0)
 
 	subkeys, err := k.ReadSubKeyNames(-1)
 	if err != nil {
@@ -42,7 +59,7 @@ func getSoftwareList(baseKey string, arch string) ([]so.Software, error) {
 
 		dn, _, err := sk.GetStringValue("DisplayName")
 		if err == nil {
-			swv := so.Software{DisplayName: dn, Arch: arch}
+			swv := Software{DisplayName: dn, Arch: arch}
 
 			dv, _, err := sk.GetStringValue("DisplayVersion")
 			if err == nil {

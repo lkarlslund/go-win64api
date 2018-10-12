@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	ole "github.com/go-ole/go-ole"
-	"github.com/go-ole/go-ole/oleutil"
-
-	so "github.com/iamacarpet/go-win64api/shared"
+	ole "github.com/lkarlslund/go-ole"
+	"github.com/lkarlslund/go-ole/oleutil"
 )
 
 var updateResultStatus []string = []string{
@@ -20,8 +18,20 @@ var updateResultStatus []string = []string{
 	"Aborted",
 }
 
-func UpdatesPending() (*so.WindowsUpdate, error) {
-	retData := &so.WindowsUpdate{}
+type WindowsUpdate struct {
+	UpdatesReq    bool                    `json:"required"`
+	NumUpdates    int                     `json:"number"`
+	UpdateHistory []*WindowsUpdateHistory `json:"history"`
+}
+
+type WindowsUpdateHistory struct {
+	EventDate  time.Time `json:"eventDate"`
+	Status     string    `json:"status"`
+	UpdateName string    `json:"updateName"`
+}
+
+func UpdatesPending() (*WindowsUpdate, error) {
+	retData := &WindowsUpdate{}
 
 	ole.CoInitialize(0)
 	defer ole.CoUninitialize()
@@ -107,7 +117,7 @@ func UpdatesPending() (*so.WindowsUpdate, error) {
 				return fmt.Errorf("Error while getting property Title from Windows Update history. %s", err.Error())
 			}
 
-			retData.UpdateHistory = append(retData.UpdateHistory, &so.WindowsUpdateHistory{
+			retData.UpdateHistory = append(retData.UpdateHistory, &WindowsUpdateHistory{
 				EventDate:  updateDate.Value().(time.Time),
 				Status:     updateResultStatus[int(resultCode.Val)],
 				UpdateName: updateName.Value().(string),

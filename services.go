@@ -7,7 +7,6 @@ import (
 	"time"
 	"unsafe"
 
-	so "github.com/iamacarpet/go-win64api/shared"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -43,7 +42,18 @@ type SERVICE_STATUS_PROCESS struct {
 	dwServiceFlags            uint32
 }
 
-func GetServices() ([]so.Service, error) {
+type Service struct {
+	SCName      string `json:"name"`
+	DisplayName string `json:"displayName"`
+	Status      uint32 `json:"status"`
+	StatusText  string `json:"statusText"`
+	ServiceType uint32 `json:"serviceType"`
+	IsRunning   bool   `json:"isRunning"`
+	AcceptStop  bool   `json:"acceptStop"`
+	RunningPid  uint32 `json:"pid"`
+}
+
+func GetServices() ([]Service, error) {
 	hPointer, err := syscall.UTF16PtrFromString("")
 	handle, err := windows.OpenSCManager(hPointer, nil, windows.SC_MANAGER_ENUMERATE_SERVICE|windows.SC_MANAGER_CONNECT)
 	if err != nil {
@@ -55,7 +65,7 @@ func GetServices() ([]so.Service, error) {
 		bytesReq     uint32
 		numReturned  uint32
 		resumeHandle uint32
-		retData      []so.Service = make([]so.Service, 0)
+		retData      []Service = make([]Service, 0)
 	)
 
 	_, _, _ = svcEnumServicesStatusEx.Call(
@@ -94,7 +104,7 @@ func GetServices() ([]so.Service, error) {
 			for i := uint32(0); i < numReturned; i++ {
 				var data *ENUM_SERVICE_STATUS_PROCESS = (*ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(iter))
 
-				rData := so.Service{
+				rData := Service{
 					SCName:      syscall.UTF16ToString((*[4096]uint16)(unsafe.Pointer(data.lpServiceName))[:]),
 					DisplayName: syscall.UTF16ToString((*[4096]uint16)(unsafe.Pointer(data.lpDisplayName))[:]),
 					Status:      data.ServiceStatusProcess.dwCurrentState,

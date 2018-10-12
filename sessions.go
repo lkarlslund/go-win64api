@@ -9,8 +9,6 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
-
-	so "github.com/iamacarpet/go-win64api/shared"
 )
 
 var (
@@ -52,13 +50,24 @@ type LSA_UNICODE_STRING struct {
 	buffer        uintptr
 }
 
-func ListLoggedInUsers() ([]so.SessionDetails, error) {
+type SessionDetails struct {
+	Username   string `json:"username"`
+	Domain     string `json:"domain"`
+	LocalUser  bool   `json:"isLocal"`
+	LocalAdmin bool   `json:"isAdmin"`
+}
+
+func (s *SessionDetails) FullUser() string {
+	return fmt.Sprintf("%s\\%s", s.Domain, s.Username)
+}
+
+func ListLoggedInUsers() ([]SessionDetails, error) {
 	var (
 		logonSessionCount uint64
 		loginSessionList  uintptr
 		sizeTest          LUID
-		uList             []string            = make([]string, 0)
-		uSessList         []so.SessionDetails = make([]so.SessionDetails, 0)
+		uList             []string         = make([]string, 0)
+		uSessList         []SessionDetails = make([]SessionDetails, 0)
 		PidLUIDList       map[uint32]SessionLUID
 	)
 	PidLUIDList, err := ProcessLUIDList()
@@ -92,7 +101,7 @@ func ListLoggedInUsers() ([]so.SessionDetails, error) {
 						if !(i < len(uList) && uList[i] == sUser) {
 							if uok, isAdmin := luidinmap(&data.LogonId, &PidLUIDList); uok {
 								uList = append(uList, sUser)
-								ud := so.SessionDetails{
+								ud := SessionDetails{
 									Username:   strings.ToLower(LsatoString(data.UserName)),
 									Domain:     strLogonDomain,
 									LocalAdmin: isAdmin,

@@ -9,21 +9,78 @@ import (
 	"strings"
 	"time"
 
-	ole "github.com/go-ole/go-ole"
-	"github.com/go-ole/go-ole/oleutil"
-
-	so "github.com/iamacarpet/go-win64api/shared"
+	ole "github.com/lkarlslund/go-ole"
+	"github.com/lkarlslund/go-ole/oleutil"
 )
 
-func GetSystemProfile() (so.Hardware, so.OperatingSystem, so.Memory, []so.Disk, []so.Network, error) {
+type Hardware struct {
+	HardwareUUID      string       `json:"HardwareUUID"`
+	Manufacturer      string       `json:"Manufacturer"`
+	Model             string       `json:"Model"`
+	ServiceTag        string       `json:"ServiceTag"`
+	BIOSVersion       string       `json:"biosVersion"`
+	BIOSManufacturer  string       `json:"biosManufacturer"`
+	BIOSReleaseDate   time.Time    `json:"biosReleaseDate"`
+	IsUsingUEFI       bool         `json:"isUsingUEFI"`
+	SecureBootEnabled bool         `json:"safebootEnabled"`
+	CPU               []CPU        `json:"cpus"`
+	Memory            []MemoryDIMM `json:"memoryDIMMs"`
+}
+
+type CPU struct {
+	FriendlyName    string `json:"FriendlyName"`
+	NumberOfCores   uint8  `json:"cores"`
+	NumberOfLogical uint8  `json:"logical"`
+}
+
+type MemoryDIMM struct {
+	MType string `json:"MemoryType"`
+	Size  uint64 `json:"Size"`
+	Speed uint16 `json:"Speed"`
+}
+
+type OperatingSystem struct {
+	FriendlyName   string    `json:"FriendlyName"`
+	Version        string    `json:"Version"`
+	Architecture   string    `json:"Architecture"`
+	LanguageCode   uint16    `json:"Language"`
+	LastBootUpTime time.Time `json:"LastBootUpTime`
+}
+
+type Memory struct {
+	TotalRAM              uint64 `json:"totalRAM"`
+	UsableRAM             uint64 `json:"usableRAM"`
+	FreeRAM               uint64 `json:"freeRAM"`
+	TotalPageFile         uint64 `json:"totalPF"`
+	FreePageFile          uint64 `json:"freePF"`
+	SystemManagedPageFile bool   `json:"managedPF"`
+}
+
+type Disk struct {
+	DriveName          string `json:"DriveName"`
+	TotalSize          uint64 `json:"TotalSize"`
+	Available          uint64 `json:"FreeSpace"`
+	FileSystem         string `json:"FileSystem"`
+	BitLockerEnabled   bool   `json:"BitLockerEnabled"`
+	BitLockerEncrypted bool   `json:"BitLockerEncrypted"`
+}
+
+type Network struct {
+	Name          string   `json:"NetworkName"`
+	MACAddress    string   `json:"MACAddress"`
+	IPAddressCIDR []string `json:"IPAddresses"`
+	DHCPEnabled   bool     `json:"DHCPEnabled"`
+}
+
+func GetSystemProfile() (Hardware, OperatingSystem, Memory, []Disk, []Network, error) {
 	ole.CoInitialize(0)
 	defer ole.CoUninitialize()
 
-	retHW := so.Hardware{}
-	retOS := so.OperatingSystem{}
-	retMEM := so.Memory{}
-	retDISK := make([]so.Disk, 0)
-	retNET := make([]so.Network, 0)
+	retHW := Hardware{}
+	retOS := OperatingSystem{}
+	retMEM := Memory{}
+	retDISK := make([]Disk, 0)
+	retNET := make([]Network, 0)
 
 	// Pre-WMI Queries
 	var err error
@@ -370,7 +427,7 @@ func GetSystemProfile() (so.Hardware, so.OperatingSystem, so.Memory, []so.Disk, 
 				item := itemRaw.ToIDispatch()
 				defer item.Release()
 
-				retCPU := so.CPU{}
+				retCPU := CPU{}
 
 				resFriendlyName, err := oleutil.GetProperty(item, "Name")
 				if err != nil {
@@ -439,7 +496,7 @@ func GetSystemProfile() (so.Hardware, so.OperatingSystem, so.Memory, []so.Disk, 
 				item := itemRaw.ToIDispatch()
 				defer item.Release()
 
-				retMD := so.MemoryDIMM{}
+				retMD := MemoryDIMM{}
 
 				resCapacity, err := oleutil.GetProperty(item, "Capacity")
 				if err != nil {
@@ -516,7 +573,7 @@ func GetSystemProfile() (so.Hardware, so.OperatingSystem, so.Memory, []so.Disk, 
 				item := itemRaw.ToIDispatch()
 				defer item.Release()
 
-				retDR := so.Disk{}
+				retDR := Disk{}
 
 				resName, err := oleutil.GetProperty(item, "Name")
 				if err != nil {
@@ -598,7 +655,7 @@ func GetSystemProfile() (so.Hardware, so.OperatingSystem, so.Memory, []so.Disk, 
 				item := itemRaw.ToIDispatch()
 				defer item.Release()
 
-				retNW := so.Network{}
+				retNW := Network{}
 
 				resName, err := oleutil.GetProperty(item, "Description")
 				if err != nil {

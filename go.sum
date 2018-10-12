@@ -1,0 +1,3 @@
+github.com/lkarlslund/go-win64api v0.0.0-20180329151314-0333309b5a2c/go.mod h1:J5gbreLpyu+voaGpRHH74VsajjBm1MUxX//oGg6/X/M=
+github.com/lkarlslund/go-ole v1.2.1/go.mod h1:SeWAh6mJPYt5TtUntASqQ0YcPGW/j2OSsEXmagIITlk=
+golang.org/x/sys v0.0.0-20181011152604-fa43e7bc11ba/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
